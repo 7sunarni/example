@@ -55,7 +55,7 @@ func main() {
 	loggo.Ini(loggo.Config{
 		Level:     level,
 		Prefix:    "pingtunnel",
-		MaxDay:    3,
+		MaxDay:    2,
 		NoLogFile: *option.Nolog > 0,
 		NoPrint:   *option.Noprint > 0,
 	})

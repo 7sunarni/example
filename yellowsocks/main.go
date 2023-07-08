@@ -15,19 +15,6 @@ func Run() {
 		return
 	}
 	defer common.CrashLog()
-	level := loggo.LEVEL_INFO
-	if loggo.NameToLevel(*option.Loglevel) >= 0 {
-		level = loggo.NameToLevel(*option.Loglevel)
-	}
-	loggo.Ini(loggo.Config{
-		Level:     level,
-		Prefix:    "yellowsocks",
-		MaxDay:    3,
-		NoLogFile: *option.Nolog > 0,
-		NoPrint:   *option.Noprint > 0,
-	})
-	loggo.Info("start...")
-
 	tcpaddr, err := net.ResolveTCPAddr("tcp", *option.ListenTCP)
 	if err != nil {
 		loggo.Error("listen fail %s", err)
