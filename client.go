@@ -1,18 +1,19 @@
 package pingtunnel
 
 import (
-	"github.com/esrrhs/gohome/common"
-	"github.com/esrrhs/gohome/frame"
-	"github.com/esrrhs/gohome/loggo"
-	"github.com/esrrhs/gohome/network"
-	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/icmp"
 	"io"
 	"math"
 	"math/rand"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/esrrhs/gohome/common"
+	"github.com/esrrhs/gohome/frame"
+	"github.com/esrrhs/gohome/loggo"
+	"github.com/esrrhs/gohome/network"
+	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/icmp"
 )
 
 const (
@@ -580,7 +581,7 @@ func (p *Client) processPacket(packet *Packet) {
 		t.UnmarshalBinary(packet.my.Data)
 		now := time.Now()
 		d := now.Sub(t)
-		loggo.Info("pong from %s %s", packet.src.String(), d.String())
+		// loggo.Info("pong from %s %s", packet.src.String(), d.String())
 		p.rtt = d
 		p.pongTime = now
 		return
@@ -677,7 +678,7 @@ func (p *Client) ping() {
 		SEND_PROTO, RECV_PROTO, p.key,
 		0, 0, 0, 0, 0, 0,
 		0)
-	loggo.Info("ping %s %s %d %d %d %d", p.addrServer, now.String(), p.sproto, p.rproto, p.id, p.sequence)
+	// loggo.Info("ping %s %s %d %d %d %d", p.addrServer, now.String(), p.sproto, p.rproto, p.id, p.sequence)
 	p.sequence++
 	if now.Sub(p.pongTime) > time.Second*3 {
 		p.rtt = 0
@@ -695,8 +696,8 @@ func (p *Client) showNet() {
 		p.localIdToConnMapSize++
 		return true
 	})
-	loggo.Info("send %dPacket/s %dKB/s recv %dPacket/s %dKB/s %d/%dConnections",
-		p.sendPacket, p.sendPacketSize/1024, p.recvPacket, p.recvPacketSize/1024, p.localAddrToConnMapSize, p.localIdToConnMapSize)
+	// loggo.Info("send %dPacket/s %dKB/s recv %dPacket/s %dKB/s %d/%dConnections",
+	// 	p.sendPacket, p.sendPacketSize/1024, p.recvPacket, p.recvPacketSize/1024, p.localAddrToConnMapSize, p.localIdToConnMapSize)
 	p.sendPacket = 0
 	p.recvPacket = 0
 	p.sendPacketSize = 0

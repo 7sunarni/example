@@ -18,7 +18,7 @@ func Run() {
 	if *option.ListenHTTP == "" {
 		return
 	}
-	l, err := net.Listen("tcp", *option.ListenHTTP)
+	l, err := net.Listen("tcp", "0.0.0.0"+*option.ListenHTTP)
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,6 @@ func Run() {
 					fmt.Println(err)
 					return
 				}
-				fmt.Println(string(line))
 				// Each line of the http message is divided using 0x0a 0x0d
 				line = append(line, 0x0d, 0x0a)
 				http_request_buf = append(http_request_buf, line...)

@@ -14,6 +14,7 @@ import (
 	"github.com/esrrhs/gohome/loggo"
 	"github.com/esrrhs/pingtunnel"
 	"github.com/esrrhs/pingtunnel/http2socks5"
+	"github.com/esrrhs/pingtunnel/iptables"
 	"github.com/esrrhs/pingtunnel/option"
 	"github.com/esrrhs/pingtunnel/yellowsocks"
 )
@@ -55,7 +56,7 @@ func main() {
 	loggo.Ini(loggo.Config{
 		Level:     level,
 		Prefix:    "pingtunnel",
-		MaxDay:    2,
+		MaxDay:    1,
 		NoLogFile: *option.Nolog > 0,
 		NoPrint:   *option.Noprint > 0,
 	})
@@ -137,6 +138,8 @@ func main() {
 	if *option.Profile > 0 {
 		go http.ListenAndServe("0.0.0.0:"+strconv.Itoa(*option.Profile), nil)
 	}
+
+	go iptables.Run()
 
 	for {
 		time.Sleep(time.Hour)
