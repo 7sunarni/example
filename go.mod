@@ -13,6 +13,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/oschwald/geoip2-golang v1.8.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.10.0 // indirect
+	github.com/panjf2000/ants/v2 v2.9.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 )

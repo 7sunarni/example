@@ -3,11 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"strconv"
 	"time"
+
+	_ "net/http/pprof"
 
 	"github.com/esrrhs/gohome/common"
 	"github.com/esrrhs/gohome/geoip"
@@ -20,7 +23,9 @@ import (
 )
 
 func main() {
-
+	go func() {
+		log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+	}()
 	defer common.CrashLog()
 
 	option.ParsFlag()

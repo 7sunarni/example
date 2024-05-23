@@ -1,6 +1,8 @@
 package iptables
 
 import (
+	"bytes"
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
@@ -8,6 +10,7 @@ import (
 
 func Run() {
 	ticker := time.NewTicker(time.Hour)
+	run()
 	for {
 		select {
 		case <-ticker.C:
@@ -31,6 +34,16 @@ var commands = []string{
 }
 
 func run() {
+	c := exec.Command("sh", "-c", "iptables-save", "|", "grep", "YELLOWSOCKS")
+	d := bytes.NewBuffer(make([]byte, 0))
+	c.Stdout = d
+	if err := c.Run(); err != nil {
+		fmt.Println(err)
+		return
+	}
+	if strings.Contains(d.String(), "YELLOWSOCKS") {
+		return
+	}
 	for _, command := range commands {
 		exec.Command("iptables", strings.Split(command, " ")...).Run()
 	}

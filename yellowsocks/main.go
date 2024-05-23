@@ -91,7 +91,7 @@ func transfer(destination io.WriteCloser, source io.ReadCloser, dst string, src 
 	defer common.CrashLog()
 	defer destination.Close()
 	defer source.Close()
-	loggo.Info("begin transfer from %s -> %s", src, dst)
+	// loggo.Info("begin transfer from %s -> %s", src, dst)
 	io.Copy(destination, source)
-	loggo.Info("end transfer from %s -> %s", src, dst)
+	// loggo.Info("end transfer from %s -> %s", src, dst)
 }

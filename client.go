@@ -330,9 +330,9 @@ func (p *Client) AcceptTcpConn(conn *net.TCPConn, targetAddr string) {
 	clientConn := &ClientConn{exit: false, tcpaddr: tcpsrcaddr, id: uuid, activeRecvTime: now, activeSendTime: now, close: false,
 		fm: fm}
 	p.addClientConn(uuid, tcpsrcaddr.String(), clientConn)
-	loggo.Info("client accept new local tcp %s %s", uuid, tcpsrcaddr.String())
+	// loggo.Info("client accept new local tcp %s %s", uuid, tcpsrcaddr.String())
 
-	loggo.Info("start connect remote tcp %s %s", uuid, tcpsrcaddr.String())
+	// loggo.Info("start connect remote tcp %s %s", uuid, tcpsrcaddr.String())
 	clientConn.fm.Connect()
 	startConnectTime := common.GetNowUpdateInSecond()
 	for !p.exit && !clientConn.exit {
