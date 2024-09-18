@@ -1,15 +1,16 @@
 package pingtunnel
 
 import (
+	"net"
+	"sync"
+	"time"
+
 	"github.com/esrrhs/gohome/common"
 	"github.com/esrrhs/gohome/frame"
 	"github.com/esrrhs/gohome/loggo"
 	"github.com/esrrhs/gohome/threadpool"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/icmp"
-	"net"
-	"sync"
-	"time"
 )
 
 func NewServer(key int, maxconn int, maxprocessthread int, maxprocessbuffer int, connecttmeout int) (*Server, error) {
@@ -20,6 +21,14 @@ func NewServer(key int, maxconn int, maxprocessthread int, maxprocessbuffer int,
 		maxprocessthread: maxprocessthread,
 		maxprocessbuffer: maxprocessbuffer,
 		connecttmeout:    connecttmeout,
+
+		sendL: &sync.Mutex{},
+		recvL: &sync.Mutex{},
+
+		sendPackets:     make(map[string]uint64),
+		recvPackets:     make(map[string]uint64),
+		sendPacketSizes: make(map[string]uint64),
+		recvPacketSizes: make(map[string]uint64),
 	}
 
 	if maxprocessthread > 0 {
@@ -46,10 +55,13 @@ type Server struct {
 	localConnMap sync.Map
 	connErrorMap sync.Map
 
-	sendPacket       uint64
-	recvPacket       uint64
-	sendPacketSize   uint64
-	recvPacketSize   uint64
+	sendL           *sync.Mutex
+	recvL           *sync.Mutex
+	sendPackets     map[string]uint64
+	recvPackets     map[string]uint64
+	sendPacketSizes map[string]uint64
+	recvPacketSizes map[string]uint64
+
 	localConnMapSize int
 
 	processtp   *threadpool.ThreadPool
@@ -92,12 +104,12 @@ func (p *Server) Run() error {
 
 		p.workResultLock.Add(1)
 		defer p.workResultLock.Done()
-
+		second := 10
 		for !p.exit {
 			p.checkTimeoutConn()
-			p.showNet()
+			p.showNet(uint64(second))
 			p.updateConnError()
-			time.Sleep(time.Second)
+			time.Sleep(time.Duration(second) * time.Second)
 		}
 	}()
 
@@ -137,7 +149,7 @@ func (p *Server) processPacket(packet *Packet) {
 	if packet.my.Type == (int32)(MyMsg_PING) {
 		t := time.Time{}
 		t.UnmarshalBinary(packet.my.Data)
-		loggo.Info("ping from %s %s %d %d %d", packet.src.String(), t.String(), packet.my.Rproto, packet.echoId, packet.echoSeq)
+		// loggo.Info("ping from %s %s %d %d %d", packet.src.String(), t.String(), packet.my.Rproto, packet.echoId, packet.echoSeq)
 		sendICMP(packet.echoId, packet.echoSeq, *p.conn, packet.src, "", "", (uint32)(MyMsg_PING), packet.my.Data,
 			(int)(packet.my.Rproto), -1, p.key,
 			0, 0, 0, 0, 0, 0,
@@ -270,9 +282,25 @@ func (p *Server) processDataPacket(packet *Packet) {
 				return
 			}
 		}
+		p.recvL.Lock()
+		{
+			i, ok := p.recvPackets[packet.src.String()]
+			if !ok {
+				i = 0
+			}
+			i = i + 1
+			p.recvPackets[packet.src.String()] = i
+		}
+		{
+			i, ok := p.recvPacketSizes[packet.src.String()]
+			if !ok {
+				i = 0
+			}
+			i = i + (uint64)(len(packet.my.Data))
+			p.recvPacketSizes[packet.src.String()] = i
+		}
+		p.recvL.Unlock()
 
-		p.recvPacket++
-		p.recvPacketSize += (uint64)(len(packet.my.Data))
 	}
 }
 
@@ -300,8 +328,25 @@ func (p *Server) RecvTCP(conn *ServerConn, id string, src *net.IPAddr) {
 				conn.rproto, -1, p.key,
 				0, 0, 0, 0, 0, 0,
 				0)
-			p.sendPacket++
-			p.sendPacketSize += (uint64)(len(mb))
+
+			p.sendL.Lock()
+			{
+				i, ok := p.sendPackets[src.String()]
+				if !ok {
+					i = 0
+				}
+				i = i + 1
+				p.sendPackets[src.String()] = i
+			}
+			{
+				i, ok := p.sendPacketSizes[src.String()]
+				if !ok {
+					i = 0
+				}
+				i = i + (uint64)(len(mb))
+				p.sendPacketSizes[src.String()] = i
+			}
+			p.sendL.Unlock()
 		}
 		time.Sleep(time.Millisecond * 10)
 		now := common.GetNowUpdateInSecond()
@@ -363,8 +408,25 @@ func (p *Server) RecvTCP(conn *ServerConn, id string, src *net.IPAddr) {
 					conn.rproto, -1, p.key,
 					0, 0, 0, 0, 0, 0,
 					0)
-				p.sendPacket++
-				p.sendPacketSize += (uint64)(len(mb))
+
+				p.sendL.Lock()
+				{
+					i, ok := p.sendPackets[src.String()]
+					if !ok {
+						i = 0
+					}
+					i = i + 1
+					p.sendPackets[src.String()] = i
+				}
+				{
+					i, ok := p.sendPacketSizes[src.String()]
+					if !ok {
+						i = 0
+					}
+					i = i + (uint64)(len(mb))
+					p.sendPacketSizes[src.String()] = i
+				}
+				p.sendL.Unlock()
 			}
 		}
 
@@ -425,8 +487,24 @@ func (p *Server) RecvTCP(conn *ServerConn, id string, src *net.IPAddr) {
 				conn.rproto, -1, p.key,
 				0, 0, 0, 0, 0, 0,
 				0)
-			p.sendPacket++
-			p.sendPacketSize += (uint64)(len(mb))
+			p.sendL.Lock()
+			{
+				i, ok := p.sendPackets[src.String()]
+				if !ok {
+					i = 0
+				}
+				i = i + 1
+				p.sendPackets[src.String()] = i
+			}
+			{
+				i, ok := p.sendPacketSizes[src.String()]
+				if !ok {
+					i = 0
+				}
+				i = i + (uint64)(len(mb))
+				p.sendPacketSizes[src.String()] = i
+			}
+			p.sendL.Unlock()
 		}
 
 		nodatarecv := true
@@ -492,9 +570,25 @@ func (p *Server) Recv(conn *ServerConn, id string, src *net.IPAddr) {
 			conn.rproto, -1, p.key,
 			0, 0, 0, 0, 0, 0,
 			0)
+		p.sendL.Lock()
+		{
+			i, ok := p.sendPackets[src.String()]
+			if !ok {
+				i = 0
+			}
+			i = i + 1
+			p.sendPackets[src.String()] = i
+		}
+		{
+			i, ok := p.sendPacketSizes[src.String()]
+			if !ok {
+				i = 0
+			}
+			i = i + (uint64)(n)
+			p.sendPacketSizes[src.String()] = i
+		}
+		p.sendL.Unlock()
 
-		p.sendPacket++
-		p.sendPacketSize += (uint64)(n)
 	}
 }
 
@@ -544,18 +638,51 @@ func (p *Server) checkTimeoutConn() {
 	}
 }
 
-func (p *Server) showNet() {
+func (p *Server) showNet(second uint64) {
 	p.localConnMapSize = 0
 	p.localConnMap.Range(func(key, value interface{}) bool {
 		p.localConnMapSize++
 		return true
 	})
-	loggo.Info("send %dPacket/s %dKB/s recv %dPacket/s %dKB/s %dConnections",
-		p.sendPacket, p.sendPacketSize/1024, p.recvPacket, p.recvPacketSize/1024, p.localConnMapSize)
-	p.sendPacket = 0
-	p.recvPacket = 0
-	p.sendPacketSize = 0
-	p.recvPacketSize = 0
+	p.sendL.Lock()
+	p.recvL.Lock()
+
+	sendPacketsClone := make(map[string]uint64)
+	recvPacketsClone := make(map[string]uint64)
+	sendPacketsSizesClone := make(map[string]uint64)
+	recvPacketsSizesClone := make(map[string]uint64)
+
+	for k, v := range p.sendPackets {
+		sendPacketsClone[k] = v
+	}
+	for k, v := range p.recvPackets {
+		recvPacketsClone[k] = v
+	}
+	for k, v := range p.sendPacketSizes {
+		sendPacketsSizesClone[k] = v
+	}
+	for k, v := range p.recvPacketSizes {
+		recvPacketsSizesClone[k] = v
+	}
+	p.sendPackets = make(map[string]uint64)
+	p.recvPackets = make(map[string]uint64)
+	p.sendPacketSizes = make(map[string]uint64)
+	p.recvPacketSizes = make(map[string]uint64)
+	p.sendL.Unlock()
+	p.recvL.Unlock()
+
+	for k, v := range sendPacketsClone {
+		loggo.Info("src %s send %d Packet/s", k, v/second)
+	}
+	for k, v := range recvPacketsClone {
+		loggo.Info("src %s recv %d Packet/s", k, v/second)
+	}
+	for k, v := range sendPacketsSizesClone {
+		loggo.Info("src %s send %d KB/s", k, v/second/1024)
+	}
+	for k, v := range recvPacketsSizesClone {
+		loggo.Info("src %s recv %d KB/s", k, v/second/1024)
+	}
 }
 
 func (p *Server) addServerConn(uuid string, serverConn *ServerConn) {
