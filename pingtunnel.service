@@ -1,0 +1,12 @@
+[Unit]
+Description=My Miscellaneous Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/workspace/pingtunnel
+ExecStart=/root/workspace/pingtunnel/pingtunnel -type server
+Restart=on-failure # or always, on-abort, etc
+
+[Install]
+WantedBy=multi-user.target
