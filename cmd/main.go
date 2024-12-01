@@ -132,6 +132,7 @@ func main() {
 		loggo.Info("Client Listen %s (%s) Server %s (%s) TargetPort %s:", c.Addr(), c.IPAddr(),
 			c.ServerAddr(), c.ServerIPAddr(), c.TargetAddr())
 		err = c.Run()
+		go iptables.Run()
 		if err != nil {
 			loggo.Error("Run ERROR: %s", err.Error())
 			return
@@ -143,8 +144,6 @@ func main() {
 	if *option.Profile > 0 {
 		go http.ListenAndServe("0.0.0.0:"+strconv.Itoa(*option.Profile), nil)
 	}
-
-	go iptables.Run()
 
 	for {
 		time.Sleep(time.Hour)
